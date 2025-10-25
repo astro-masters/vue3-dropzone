@@ -1,6 +1,6 @@
 <template>
   <form class="app">
-    <Vue3Dropzone v-model="sampleFiles"/>
+    <Vue3Dropzone v-model="sampleFiles" height="250px" img-width="300px"/>
   </form>
 </template>
 
