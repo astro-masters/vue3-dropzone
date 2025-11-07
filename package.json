@@ -2,7 +2,7 @@
   "name": "@jaxtheprime/vue3-dropzone",
   "description": "Vue simple dropzone",
   "private": false,
-  "version": "3.4.4",
+  "version": "3.4.5",
   "author": "Emad Moghimi <jaxtheprime@gmail.com>",
   "license": "MIT",
   "type": "module",
