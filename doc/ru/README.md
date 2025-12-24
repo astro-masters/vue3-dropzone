@@ -18,14 +18,14 @@ yarn add @jaxtheprime/vue3-dropzone
 ```js
 // В вашем main.js
 import { createApp } from 'vue'
-import vue3Dropzone from '@jaxtheprime/vue3-dropzone'
+import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
 import "@jaxtheprime/vue3-dropzone/dist/style.css" // Не забудьте подключить стили!
 
 const app = createApp(App)
 app.component('Vue3Dropzone', Vue3Dropzone)
 
 // ИЛИ внутри вашего компонента (локальная регистрация)
-import vue3Dropzone from '@jaxtheprime/vue3-dropzone'
+import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
 import "@jaxtheprime/vue3-dropzone/dist/style.css"
 ```
 
@@ -68,6 +68,48 @@ const state = ref('indeterminate') // Может быть: 'indeterminate', 'suc
 </script>
 ```
 
+## TypeScript
+
+Пакет поставляется с типами TypeScript и реэкспортирует их из главного entry.
+
+### Пример с типизированным v-model
+
+```vue
+<template>
+  <Vue3Dropzone
+    v-model="files"
+    v-model:previews="previews"
+    mode="edit"
+    multiple
+  />
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import Vue3Dropzone, { type DropzoneFileItem } from '@jaxtheprime/vue3-dropzone'
+
+const files = ref<DropzoneFileItem[]>([])
+const previews = ref<string[]>([])
+</script>
+```
+
+### Справочник типов
+
+| Тип | Описание |
+|---|---|
+| `DropzoneMode` | `'drop' | 'preview' | 'edit'` |
+| `DropzoneState` | `'error' | 'success' | 'indeterminate'` |
+| `DropzoneStatus` | `'pending' | 'uploading' | 'success' | 'error'` |
+| `DropzonePreviewPosition` | `'inside' | 'outside'` |
+| `DropzoneSelectFileStrategy` | `'replace' | 'merge'` |
+| `DropzoneItemType` | `'file' | 'url'` |
+| `DropzoneBaseItem` | Общие поля элемента предпросмотра |
+| `DropzoneFileItem` | Элемент с реальным `File` (`type: 'file'`) |
+| `DropzoneUrlItem` | Элемент для существующего URL (`type: 'url'`) |
+| `DropzoneItem` | Union: `DropzoneFileItem | DropzoneUrlItem` |
+| `DropzoneErrorType` | Тип ошибки валидации / запросов |
+| `DropzoneErrorEvent` | Payload события `error`: `{ type, files }` |
+
 ### Поддерживаемые версии
 
 - Vue.js 3.x
@@ -93,6 +135,22 @@ const state = ref('indeterminate') // Может быть: 'indeterminate', 'suc
 - **Валидация файлов**: ограничения по размеру, типам и кастомная валидация
 - **Отслеживание прогресса**: встроенный прогресс загрузки с поддержкой серверной загрузки
 - **Обработка ошибок**: подробные состояния ошибок и обратная связь пользователю
+
+### **Предпросмотр non-image (иконки)**
+
+Для non-image файлов превью показывает иконку типа файла и имя файла. Тип определяется по MIME и/или расширению.
+
+| Тип | Примеры расширений / MIME |
+|---|---|
+| `pdf` | `.pdf`, `application/pdf` |
+| `xlsx` | `.xls`, `.xlsx`, `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| `csv` | `.csv`, `text/csv` |
+| `audio` | `audio/*`, `.mp3`, `.wav`, `.ogg`, `.flac`, `.m4a`, `.aac` |
+| `video` | `video/*`, `.mp4`, `.mkv`, `.webm`, `.mov`, `.avi`, `.mpeg`, `.mpg`, `.m4v` |
+| `doc` | `.doc`, `.docx`, `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `ppt` | `.ppt`, `.pptx`, `application/vnd.ms-powerpoint`, `application/vnd.openxmlformats-officedocument.presentationml.presentation` |
+| `archive` | `.zip`, `.tar`, `.gz`, `.tgz`, `.rar`, `.7z` |
+| `default` | всё остальное |
 
 ### **Варианты раскладки**
 
@@ -191,6 +249,28 @@ const state = ref('indeterminate') // Может быть: 'indeterminate', 'suc
 | `button`          | Заменить стандартную кнопку "Выбрать файл"           |
 | `description`     | Заменить стандартное описание требований к файлам     |
 | `preview`         | Кастомный рендеринг элемента предпросмотра            |
+| `remove-button`   | Заменить кнопку удаления в элементе предпросмотра     |
+| `progress`        | Заменить прогресс-бар в элементе предпросмотра        |
+
+#### Slot props
+
+| Slot | Props |
+|---|---|
+| `preview` | `{ data, formatSize, removeFile }` |
+| `remove-button` | `{ data, removeFile }` |
+| `progress` | `{ data, progress }` |
+
+#### Пример кастомной кнопки удаления
+
+```vue
+<template>
+  <Vue3Dropzone v-model="files" mode="edit">
+    <template #remove-button="{ data, removeFile }">
+      <button type="button" @click.stop="removeFile(data)">Удалить</button>
+    </template>
+  </Vue3Dropzone>
+</template>
+```
 
 ## 🔧 Методы компонента
 
