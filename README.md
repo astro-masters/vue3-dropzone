@@ -10,9 +10,9 @@ galleries, and product management interfaces.
 ### Installation
 
 ```bash
-npm install @jaxtheprime/vue3-dropzone
+npm install @astro-masters/vue3-dropzone-ts
 # or
-yarn add @jaxtheprime/vue3-dropzone
+yarn add @astro-masters/vue3-dropzone-ts
 ```
 
 ### Basic Usage
@@ -20,15 +20,15 @@ yarn add @jaxtheprime/vue3-dropzone
 ```js
 // In your main.js
 import { createApp } from 'vue'
-import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
-import "@jaxtheprime/vue3-dropzone/dist/style.css" // Don't forget to import the styles!
+import Vue3Dropzone from '@astro-masters/vue3-dropzone-ts'
+import "@astro-masters/vue3-dropzone-ts/style.css" // Don't forget to import the styles!
 
 const app = createApp(App)
 app.component('Vue3Dropzone', Vue3Dropzone)
 
 // OR in your component file (local registration)
-import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
-import "@jaxtheprime/vue3-dropzone/dist/style.css"
+import Vue3Dropzone from '@astro-masters/vue3-dropzone-ts'
+import "@astro-masters/vue3-dropzone-ts/style.css"
 ```
 
 ### Minimal Example
@@ -88,7 +88,7 @@ The package ships with TypeScript types and re-exports them from the main entry.
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import Vue3Dropzone, { type DropzoneFileItem } from '@jaxtheprime/vue3-dropzone'
+import Vue3Dropzone, { type DropzoneFileItem } from '@astro-masters/vue3-dropzone-ts'
 
 const files = ref<DropzoneFileItem[]>([])
 const previews = ref<string[]>([])
