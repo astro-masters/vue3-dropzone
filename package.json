@@ -25,13 +25,15 @@
     "dist/style.css"
   ],
   "keywords": [
-    "vue",
+    "vue3",
     "dropzone",
     "drop",
     "zone",
     "input",
-    "image",
-    "preview"
+    "fileUploader",
+    "file-uploader",
+    "vue3-file-uploader",
+    "vue3-file-uploader-ts"
   ],
   "scripts": {
     "dev": "vite --config vite.config.ts",
@@ -55,7 +57,7 @@
     "@vitejs/plugin-vue": "^5.0.4",
     "@types/node": "^22.10.2",
     "@tsconfig/node22": "^22.0.0",
-    "@vue/language-core": "^3.2.1",
+    "@vue/language-core": "~3.0.1",
     "@vue/tsconfig": "^0.7.0",
     "sass-embedded": "^1.83.0",
     "typescript": "^5.7.2",
