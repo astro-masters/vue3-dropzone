@@ -6,25 +6,52 @@
   </Preview>
 </template>
 
-<script setup>
-import {computed} from 'vue';
-import Preview from './Preview.vue';
+<script setup lang="ts">
+ import { computed, type PropType } from 'vue'
+ import type { DropzoneItem, DropzoneMode } from '../types'
+ import Preview from './Preview.vue'
 
-const props = defineProps({
-  files: Array,
-  previewUrls: Array,
-  multiple: Boolean,
-  mode: String,
-  allowSelectOnPreview: Boolean,
-  imgWidth: [Number, String],
-  imgHeight: [Number, String],
-  previewWrapperClasses: [String, Array, Object]
-});
+ const props = defineProps({
+   files: {
+     type: Array as PropType<DropzoneItem[]>,
+     default: () => [],
+   },
+   previewUrls: {
+     type: Array as PropType<string[]>,
+     default: () => [],
+   },
+   multiple: {
+     type: Boolean,
+     default: false,
+   },
+   mode: {
+     type: String as PropType<DropzoneMode>,
+     default: 'drop',
+   },
+   allowSelectOnPreview: {
+     type: Boolean,
+     default: false,
+   },
+   imgWidth: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   imgHeight: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   previewWrapperClasses: {
+     type: [String, Array, Object] as PropType<string | string[] | Record<string, boolean>>,
+   },
+ })
 
-const emit = defineEmits(['removeFile', 'click', 'mouseover', 'mouseleave']);
+ const emit = defineEmits<{
+   (e: 'removeFile', file: DropzoneItem): void
+   (e: 'click', event: MouseEvent): void
+   (e: 'mouseover', event: MouseEvent): void
+   (e: 'mouseleave', event: MouseEvent): void
+ }>()
 
-const previewProps = computed(() => ({
-  ...props,
-  removeFileBuiltIn: (file) => emit('removeFile', file)
-}));
-</script>
+ const previewProps = computed(() => ({
+   ...props,
+   removeFileBuiltIn: (file: DropzoneItem) => emit('removeFile', file),
+ }))
+ </script>

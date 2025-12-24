@@ -1,0 +1,19 @@
+{
+  "extends": [
+    "@vue/tsconfig/tsconfig.dom.json",
+    "@vue/tsconfig/tsconfig.lib.json"
+  ],
+  "include": [
+    "env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.vue"
+  ],
+  "compilerOptions": {
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "moduleResolution": "Bundler"
+  }
+}
