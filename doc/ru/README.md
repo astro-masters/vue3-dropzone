@@ -8,9 +8,9 @@
 ### Установка
 
 ```bash
-npm install @jaxtheprime/vue3-dropzone
+npm install @astro-masters/vue3-dropzone-ts
 # или
-yarn add @jaxtheprime/vue3-dropzone
+yarn add @astro-masters/vue3-dropzone-ts
 ```
 
 ### Базовое использование
@@ -18,15 +18,15 @@ yarn add @jaxtheprime/vue3-dropzone
 ```js
 // В вашем main.js
 import { createApp } from 'vue'
-import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
-import "@jaxtheprime/vue3-dropzone/dist/style.css" // Не забудьте подключить стили!
+import Vue3Dropzone from '@astro-masters/vue3-dropzone-ts'
+import "@astro-masters/vue3-dropzone-ts/style.css" // Не забудьте подключить стили!
 
 const app = createApp(App)
 app.component('Vue3Dropzone', Vue3Dropzone)
 
 // ИЛИ внутри вашего компонента (локальная регистрация)
-import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
-import "@jaxtheprime/vue3-dropzone/dist/style.css"
+import Vue3Dropzone from '@astro-masters/vue3-dropzone-ts'
+import "@astro-masters/vue3-dropzone-ts/style.css"
 ```
 
 ### Минимальный пример
@@ -86,7 +86,7 @@ const state = ref('indeterminate') // Может быть: 'indeterminate', 'suc
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import Vue3Dropzone, { type DropzoneFileItem } from '@jaxtheprime/vue3-dropzone'
+import Vue3Dropzone, { type DropzoneFileItem } from '@astro-masters/vue3-dropzone-ts'
 
 const files = ref<DropzoneFileItem[]>([])
 const previews = ref<string[]>([])

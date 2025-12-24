@@ -1,8 +1,8 @@
 {
-  "name": "@jaxtheprime/vue3-dropzone",
+  "name": "@astro-masters/vue3-dropzone-ts",
   "description": "Vue simple dropzone",
   "private": false,
-  "version": "3.4.5",
+  "version": "1.0.0",
   "author": "Emad Moghimi <jaxtheprime@gmail.com>",
   "license": "MIT",
   "type": "module",
@@ -18,8 +18,12 @@
       "import": "./dist/Vue3Dropzone.es.js",
       "require": "./dist/Vue3Dropzone.umd.js"
     },
+    "./style.css": "./dist/style.css",
     "./dist/style.css": "./dist/style.css"
   },
+  "sideEffects": [
+    "dist/style.css"
+  ],
   "keywords": [
     "vue",
     "dropzone",
@@ -33,14 +37,19 @@
     "dev": "vite --config vite.config.ts",
     "build": "vite build --config vite.config.ts",
     "preview": "vite preview --config vite.config.ts",
-    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/JaxThePrime/vue3-dropzone"
+    "url": "git+https://github.com/astro-masters/vue3-dropzone.git"
   },
-  "dependencies": {
-    "vue": "^3.4.19"
+  "bugs": {
+    "url": "https://github.com/astro-masters/vue3-dropzone/issues"
+  },
+  "homepage": "https://github.com/astro-masters/vue3-dropzone#readme",
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",
@@ -51,6 +60,7 @@
     "sass-embedded": "^1.83.0",
     "typescript": "^5.7.2",
     "unplugin-dts": "1.0.0-beta.6",
+    "vue": "^3.4.19",
     "vue-tsc": "^3.2.1",
     "vite": "^5.1.4"
   },
