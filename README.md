@@ -20,14 +20,14 @@ yarn add @jaxtheprime/vue3-dropzone
 ```js
 // In your main.js
 import { createApp } from 'vue'
-import vue3Dropzone from '@jaxtheprime/vue3-dropzone'
+import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
 import "@jaxtheprime/vue3-dropzone/dist/style.css" // Don't forget to import the styles!
 
 const app = createApp(App)
 app.component('Vue3Dropzone', Vue3Dropzone)
 
 // OR in your component file (local registration)
-import vue3Dropzone from '@jaxtheprime/vue3-dropzone'
+import Vue3Dropzone from '@jaxtheprime/vue3-dropzone'
 import "@jaxtheprime/vue3-dropzone/dist/style.css"
 ```
 
@@ -70,6 +70,48 @@ const state = ref('indeterminate') // Can be 'indeterminate', 'success', or 'err
 </script>
 ```
 
+## TypeScript
+
+The package ships with TypeScript types and re-exports them from the main entry.
+
+### Typed v-model example
+
+```vue
+<template>
+  <Vue3Dropzone
+    v-model="files"
+    v-model:previews="previews"
+    mode="edit"
+    multiple
+  />
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import Vue3Dropzone, { type DropzoneFileItem } from '@jaxtheprime/vue3-dropzone'
+
+const files = ref<DropzoneFileItem[]>([])
+const previews = ref<string[]>([])
+</script>
+```
+
+### Types reference
+
+| Type | Description |
+|---|---|
+| `DropzoneMode` | `'drop' | 'preview' | 'edit'` |
+| `DropzoneState` | `'error' | 'success' | 'indeterminate'` |
+| `DropzoneStatus` | `'pending' | 'uploading' | 'success' | 'error'` |
+| `DropzonePreviewPosition` | `'inside' | 'outside'` |
+| `DropzoneSelectFileStrategy` | `'replace' | 'merge'` |
+| `DropzoneItemType` | `'file' | 'url'` |
+| `DropzoneBaseItem` | Common fields for preview items |
+| `DropzoneFileItem` | Item with real `File` object (`type: 'file'`) |
+| `DropzoneUrlItem` | Item for existing preview URL (`type: 'url'`) |
+| `DropzoneItem` | Union: `DropzoneFileItem | DropzoneUrlItem` |
+| `DropzoneErrorType` | Validation / request error type |
+| `DropzoneErrorEvent` | `{ type, files }` payload of `error` event |
+
 ### Version Support
 - Vue.js 3.x
 - Modern browsers with ES6 support
@@ -94,6 +136,22 @@ const state = ref('indeterminate') // Can be 'indeterminate', 'success', or 'err
 - **File Validation**: Size limits, type restrictions, and custom validation
 - **Progress Tracking**: Built-in upload progress with server-side support
 - **Error Handling**: Comprehensive error states and user feedback
+
+### **Non-image previews (icons)**
+
+For non-image files the preview shows a file type icon and the filename. File type is detected using MIME type and/or extension.
+
+| Kind | Extensions / MIME examples |
+|---|---|
+| `pdf` | `.pdf`, `application/pdf` |
+| `xlsx` | `.xls`, `.xlsx`, `application/vnd.ms-excel`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` |
+| `csv` | `.csv`, `text/csv` |
+| `audio` | `audio/*`, `.mp3`, `.wav`, `.ogg`, `.flac`, `.m4a`, `.aac` |
+| `video` | `video/*`, `.mp4`, `.mkv`, `.webm`, `.mov`, `.avi`, `.mpeg`, `.mpg`, `.m4v` |
+| `doc` | `.doc`, `.docx`, `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document` |
+| `ppt` | `.ppt`, `.pptx`, `application/vnd.ms-powerpoint`, `application/vnd.openxmlformats-officedocument.presentationml.presentation` |
+| `archive` | `.zip`, `.tar`, `.gz`, `.tgz`, `.rar`, `.7z` |
+| `default` | anything else |
 
 ### **Layout Options**
 
@@ -185,13 +243,35 @@ The component uses CSS custom properties for easy theming:
 
 Override default content with custom implementations:
 
-| Slot              | Purpose                                           |
-|-------------------|---------------------------------------------------|
-| `placeholder-img` | Replace the default placeholder image             |
-| `title`           | Replace the default "Drop your files here" title  |
-| `button`          | Replace the default "Select File" button          |
-| `description`     | Replace the default file requirements description |
-| `preview`         | Custom preview item rendering                     |
+| Slot | Purpose |
+|---|---|
+| `placeholder-img` | Replace the default placeholder image |
+| `title` | Replace the default "Drop your files here" title |
+| `button` | Replace the default "Select File" button |
+| `description` | Replace the default file requirements description |
+| `preview` | Custom preview item rendering |
+| `remove-button` | Replace the remove button in preview items |
+| `progress` | Replace the progress bar in preview items |
+
+#### Slot props
+
+| Slot | Props |
+|---|---|
+| `preview` | `{ data, formatSize, removeFile }` |
+| `remove-button` | `{ data, removeFile }` |
+| `progress` | `{ data, progress }` |
+
+#### Custom remove button example
+
+```vue
+<template>
+  <Vue3Dropzone v-model="files" mode="edit">
+    <template #remove-button="{ data, removeFile }">
+      <button type="button" @click.stop="removeFile(data)">Remove</button>
+    </template>
+  </Vue3Dropzone>
+</template>
+```
 
 ## 🔧 Component Methods
 
