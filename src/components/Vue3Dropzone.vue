@@ -107,6 +107,9 @@
    DropzoneSelectFileStrategy,
    DropzoneState,
  } from '../types'
+ import { generateFileId } from '../utils/generateFileId'
+ import { processIncomingFiles as processIncomingFilesUseCase } from '../usecases/processIncomingFiles'
+ import { removeDropzoneItem } from '../usecases/removeDropzoneItem'
  import PlaceholderImage from './PlaceholderImage.vue'
  import PreviewSlot from './PreviewSlot.vue'
 
@@ -300,121 +303,42 @@
   return !props.disabled && (props.mode === 'drop' || (props.mode === 'preview' && props.allowSelectOnPreview) || props.mode === 'edit')
  })
 
- const generateFileId = (): number => {
-  return Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
- }
-
  const processIncomingFiles = (incomingFiles: FileList | File[]): void => {
-  const allFiles = Array.from(incomingFiles).slice(0, props.maxFiles)
-  const filesSizesAreValid = allFiles.map((item) => {
-    const itemSize = Number((item.size / 1024 / 1024).toFixed(2))
-    return itemSize <= props.maxFileSize
+  const result = processIncomingFilesUseCase({
+    incomingFiles,
+    currentFiles: files.value,
+    maxFiles: props.maxFiles,
+    maxFileSize: props.maxFileSize,
+    accept: props.accept,
+    mode: props.mode,
+    allowSelectOnPreview: props.allowSelectOnPreview,
+    selectFileStrategy: props.selectFileStrategy,
+    generateFileId,
+    previewsReplaced: previewsReplaced.value,
   })
-  const filesTypesAreValid = allFiles.map((item) => {
-    if (props.accept) {
-      return props.accept.includes(item.type)
+
+  if (result.errors.length) {
+    result.errors.forEach((error) => handleFileError(error.type, error.files))
+  }
+
+  files.value = result.nextFiles
+  previewsReplaced.value = result.nextPreviewsReplaced
+
+  if (result.shouldClearPreviews) {
+    emit('update:previews', [])
+  }
+
+  result.uploadCandidates.forEach((fileItem) => {
+    // Загружаем файлы на сервер (только не для preview режима)
+    if (props.serverSide && props.mode !== 'preview') {
+      uploadFileToServer(fileItem)
+    } else if (props.mode !== 'preview') {
+      fileItem.progress = 100
+      fileItem.status = 'success'
+      fileItem.message = 'Файл успешно загружен'
+      emit('fileUploaded', { file: fileItem })
     }
-    return true
   })
-
-  if (
-      (filesSizesAreValid.every((item) => item === true) &&
-          props.accept &&
-          filesTypesAreValid.every((item) => item === true)) ||
-      !props.accept && filesSizesAreValid.every((item) => item === true)
-  ) {
-    const processFile = (file: File): DropzoneFileItem => ({
-      file,
-      id: generateFileId(),
-      src: URL.createObjectURL(file),
-      progress: 0,
-      status: 'pending',
-      message: null,
-      name: file.name,
-      size: file.size,
-      type: 'file',
-      isPreview: false,
-    })
-
-    // Используем selectFileStrategy для всех режимов
-    const strategy = props.selectFileStrategy;
-
-    // В preview режиме с allowSelectOnPreview работаем немного иначе
-    if (props.mode === "preview" && props.allowSelectOnPreview) {
-      // В preview режиме храним файлы с метаданными, но считаем их предпросмотрами
-      const processPreviewFile = (file: File): DropzoneFileItem | null => {
-        if (!file || !(file instanceof File)) {
-          return null
-        }
-        return {
-          file,
-          id: generateFileId(),
-          src: URL.createObjectURL(file),
-          progress: 100,
-          status: 'success',
-          message: null,
-          name: file.name || 'Неизвестный файл',
-          size: file.size || 0,
-          type: 'file',
-          isPreview: true,
-        }
-      }
-
-      const processedFiles = allFiles.map(processPreviewFile).filter(Boolean) as DropzoneFileItem[]
-
-      if (strategy === "replace") {
-        files.value = processedFiles
-        // При replace скрываем исходные URL предпросмотра (обрабатывается внутри)
-        previewsReplaced.value = true;
-      }
-      if (strategy === "merge") {
-        files.value = [...files.value, ...processedFiles]
-        // При merge оставляем исходные URL предпросмотра
-      }
-    } else {
-      // Обычный режим — добавляем в массив files
-      if (strategy === "replace") {
-        files.value = allFiles.map(processFile)
-        // В edit режиме при replace также очищаем previews
-        if (props.mode === "edit") {
-          emit('update:previews', [])
-        }
-      }
-      if (strategy === "merge") {
-        files.value = [...files.value, ...allFiles.map(processFile)]
-      }
-    }
-  }
-
-  if (filesSizesAreValid.some((item) => item !== true)) {
-    const largeFiles = allFiles.filter((item) => {
-      const itemSize = Number((item.size / 1024 / 1024).toFixed(2))
-      return itemSize > props.maxFileSize
-    });
-    handleFileError('file-too-large', largeFiles)
-  }
-
-  if (props.accept && filesTypesAreValid.some((item) => item !== true)) {
-    const accept = props.accept
-    const wrongTypeFiles = allFiles.filter(
-        (item) => (accept ? !accept.includes(item.type) : false)
-    );
-    handleFileError('invalid-file-format', wrongTypeFiles)
-  }
-
-  files.value
-      .filter((fileItem) => fileItem.status !== 'success' && !fileItem.isPreview)
-      .forEach((fileItem) => {
-        // Загружаем файлы на сервер (только не для preview режима)
-        if (props.serverSide && props.mode !== "preview") {
-          uploadFileToServer(fileItem)
-        } else if (props.mode !== "preview") {
-          fileItem.progress = 100
-          fileItem.status = 'success'
-          fileItem.message = 'Файл успешно загружен'
-          emit('fileUploaded', { file: fileItem })
-        }
-      });
 }
 
 // Обработка файлов, выбранных через input
@@ -493,30 +417,33 @@ const drop = (e: DragEvent): void => {
 
 // Расширенный removeFile для обработки разных типов элементов
 const removeFile = (item: DropzoneItem): void => {
-  if (!item || !item.id) {
+  const result = removeDropzoneItem({
+    item,
+    previews: props.previews || [],
+    currentFiles: files.value,
+    serverSide: props.serverSide,
+    deleteEndpoint: props.deleteEndpoint,
+  })
+
+  if (result.removedPreviewIndex !== null) {
+    emit('update:previews', result.nextPreviews)
+    emit('previewRemoved', item)
     return
   }
 
-  if (item.type === 'url' && typeof item.id === 'string' && item.id.startsWith('preview-')) {
-    // Удаляем из массива previews (исходные URL предпросмотры)
-    const currentPreviews = [...(props.previews || [])]
-    const previewIndex = parseInt(item.id.replace('preview-', ''), 10)
-    if (!isNaN(previewIndex) && previewIndex >= 0 && previewIndex < currentPreviews.length) {
-      currentPreviews.splice(previewIndex, 1)
-      emit('update:previews', currentPreviews)
-      emit('previewRemoved', item)
-    }
-  } else if (item.isPreview) {
-    // Удаляем файлы preview-режима из массива files
-    removeFileFromList(item)
-  } else {
-    // Обычное удаление файлов
-    if (props.serverSide) {
-      removeFileFromServer(item)
-    } else {
-      removeFileFromList(item)
-    }
+  if (result.shouldDeleteFromServer) {
+    removeFileFromServer(item)
+    return
   }
+
+  files.value = result.nextFiles as DropzoneFileItem[]
+
+  if (fileInput.value) {
+    fileInput.value.value = ''
+  }
+
+  emit('fileRemoved', item)
+  emit('update:modelValue', files.value)
 };
 
 const removeFileFromServer = (item: DropzoneItem): void => {
