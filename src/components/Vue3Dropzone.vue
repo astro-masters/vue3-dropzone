@@ -109,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-	import { computed, ref, watchEffect, type PropType } from 'vue'
+	import { computed, getCurrentInstance, ref, watchEffect, type PropType } from 'vue'
 	import type {
 		DropzoneErrorEvent,
 		DropzoneFileItem,
@@ -118,6 +118,8 @@
 		DropzonePreviewPosition,
 		DropzoneSelectFileStrategy,
 		DropzoneState,
+		DropzoneRemoveRequestEvent,
+		DropzoneUploadRequestEvent,
 	} from '../types'
 	import { generateFileId } from '../utils/generateFileId'
 	import { processIncomingFiles as processIncomingFilesUseCase } from '../usecases/processIncomingFiles'
@@ -296,6 +298,8 @@
 		(e: 'update:modelValue', value: DropzoneFileItem[]): void
 		(e: 'update:previews', value: string[]): void
 		(e: 'error', payload: DropzoneErrorEvent): void
+		(e: 'upload-request', payload: DropzoneUploadRequestEvent): void
+		(e: 'remove-request', payload: DropzoneRemoveRequestEvent): void
 		(e: 'fileUploaded', payload: { file: DropzoneFileItem }): void
 		(e: 'fileRemoved', payload: DropzoneItem): void
 		(e: 'previewRemoved', payload: DropzoneItem): void
@@ -306,6 +310,13 @@
 	const active = ref(false)
 	const dropzoneWrapper = ref<HTMLElement | null>(null)
 	const previewsReplaced = ref(false) // Отмечаем, что исходные предпросмотры были заменены
+	const instance = getCurrentInstance()
+
+	const hasListener = (listenerPropName: string): boolean => {
+		const vnodeProps = (instance?.vnode?.props ?? {}) as Record<string, unknown>
+		const candidate = vnodeProps[listenerPropName]
+		return typeof candidate === 'function' || (Array.isArray(candidate) && candidate.length > 0)
+	}
 	const fileInputId = computed<string>(() => {
 		if (props.fileInputId) return props.fileInputId
 		return String(generateFileId())
@@ -363,8 +374,49 @@
 
 	// Загрузка файла на сервер
 	const uploadFileToServer = (fileItem: DropzoneFileItem): void => {
+		const endpoint = props.uploadEndpoint || ''
+
+		if (hasListener('onUploadRequest')) {
+			const formData = new FormData();
+			formData.append('file', fileItem.file)
+
+			fileItem.status = 'uploading'
+			fileItem.message = 'Идёт загрузка'
+
+			let settled = false
+			const progress = (percent: number) => {
+				fileItem.progress = Math.max(0, Math.min(100, Math.round(percent)))
+			}
+			const success = () => {
+				if (settled) return
+				settled = true
+				fileItem.progress = 100
+				fileItem.status = 'success'
+				fileItem.message = 'Файл успешно загружен'
+				emit('fileUploaded', { file: fileItem })
+			}
+			const error = (message?: string) => {
+				if (settled) return
+				settled = true
+				fileItem.status = 'error'
+				fileItem.message = message ?? 'Загрузка не удалась'
+				handleFileError('upload-error', [fileItem.file])
+			}
+
+			emit('upload-request', {
+				fileItem,
+				endpoint,
+				headers: props.headers,
+				formData,
+				progress,
+				success,
+				error,
+			})
+			return
+		}
+
 		const xhr = new XMLHttpRequest();
-		xhr.open('POST', props.uploadEndpoint || '', true)
+		xhr.open('POST', endpoint, true)
 
 		// Заголовки
 		Object.keys(props.headers).forEach((key) => {
@@ -459,8 +511,35 @@
 	};
 
 	const removeFileFromServer = (item: DropzoneItem): void => {
+		const endpoint = props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : ''
+
+		if (hasListener('onRemoveRequest')) {
+			let settled = false
+			const success = () => {
+				if (settled) return
+				settled = true
+				removeFileFromList(item)
+			}
+			const error = (message?: string) => {
+				if (settled) return
+				settled = true
+				item.status = 'error'
+				item.message = message ?? 'Удаление не удалось'
+				handleFileError('delete-error', [item])
+			}
+
+			emit('remove-request', {
+				item,
+				endpoint,
+				headers: props.headers,
+				success,
+				error,
+			})
+			return
+		}
+
 		const xhr = new XMLHttpRequest();
-		xhr.open('DELETE', props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : '', true)
+		xhr.open('DELETE', endpoint, true)
 
 		// Заголовки
 		Object.keys(props.headers).forEach((key) => {

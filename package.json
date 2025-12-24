@@ -38,6 +38,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts",
     "build": "vite build --config vite.config.ts",
+    "build:watch": "vite build --config vite.config.ts --watch",
     "preview": "vite preview --config vite.config.ts",
     "typecheck": "vue-tsc --noEmit -p tsconfig.json",
     "prepublishOnly": "npm run build"

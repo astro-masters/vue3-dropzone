@@ -111,10 +111,93 @@ const previews = ref<string[]>([])
 | `DropzoneItem` | Union: `DropzoneFileItem | DropzoneUrlItem` |
 | `DropzoneErrorType` | Validation / request error type |
 | `DropzoneErrorEvent` | `{ type, files }` payload of `error` event |
+| `DropzoneUploadRequestEvent` | Payload of `upload-request` event (external upload handler) |
+| `DropzoneRemoveRequestEvent` | Payload of `remove-request` event (external remove handler) |
 
 ### Version Support
 - Vue.js 3.x
 - Modern browsers with ES6 support
+
+## Server-side upload/remove: external handlers (events)
+
+When `serverSide` is enabled, the component can upload/delete files using:
+
+- Your external handler via events `upload-request` / `remove-request`
+- Built-in `XMLHttpRequest` (fallback) if no listener is provided
+
+This approach lets you use `axios`, `fetch`, custom auth, custom API contracts, etc., while the component keeps:
+
+- Updating `fileItem.status`, `fileItem.message`, `fileItem.progress`
+- Emitting `fileUploaded` on success
+- Emitting `error` with `type: 'upload-error' | 'delete-error'` on failures
+
+### Upload example (Axios + progress)
+
+```vue
+<template>
+  <Vue3Dropzone
+    v-model="files"
+    :server-side="true"
+    upload-endpoint="https://api.example.com/upload"
+    :headers="{ Authorization: `Bearer ${token}` }"
+    @upload-request="onUploadRequest"
+  />
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue'
+import axios from 'axios'
+import Vue3Dropzone, { type DropzoneFileItem, type DropzoneUploadRequestEvent } from '@astro-masters/vue3-dropzone-ts'
+
+const token = '...'
+const files = ref<DropzoneFileItem[]>([])
+
+const onUploadRequest = async (e: DropzoneUploadRequestEvent) => {
+  try {
+    await axios.post(e.endpoint, e.formData, {
+      headers: e.headers,
+      onUploadProgress: (pe) => {
+        if (!pe.total) return
+        e.progress((pe.loaded / pe.total) * 100)
+      },
+    })
+    e.success()
+  } catch (err: any) {
+    e.error(err?.message ?? 'Upload failed', err)
+  }
+}
+</script>
+```
+
+### Remove example (Axios)
+
+```vue
+<template>
+  <Vue3Dropzone
+    v-model="files"
+    :server-side="true"
+    delete-endpoint="https://api.example.com/files"
+    :headers="{ Authorization: `Bearer ${token}` }"
+    @remove-request="onRemoveRequest"
+  />
+</template>
+
+<script setup lang="ts">
+import axios from 'axios'
+import type { DropzoneRemoveRequestEvent } from '@astro-masters/vue3-dropzone-ts'
+
+const token = '...'
+
+const onRemoveRequest = async (e: DropzoneRemoveRequestEvent) => {
+  try {
+    await axios.delete(e.endpoint, { headers: e.headers })
+    e.success()
+  } catch (err: any) {
+    e.error(err?.message ?? 'Remove failed', err)
+  }
+}
+</script>
+```
 
 ## 🎯 Key Features
 

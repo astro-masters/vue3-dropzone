@@ -44,3 +44,24 @@ export interface DropzoneErrorEvent {
   type: DropzoneErrorType | (string & {})
   files: unknown[]
 }
+
+export type DropzoneUploadRequestSuccessHandler = (response?: unknown) => void
+export type DropzoneUploadRequestErrorHandler = (message?: string, response?: unknown) => void
+
+export interface DropzoneUploadRequestEvent {
+  fileItem: DropzoneFileItem
+  endpoint: string
+  headers: Record<string, string>
+  formData: FormData
+  progress: (percent: number) => void
+  success: DropzoneUploadRequestSuccessHandler
+  error: DropzoneUploadRequestErrorHandler
+}
+
+export interface DropzoneRemoveRequestEvent {
+  item: DropzoneItem
+  endpoint: string
+  headers: Record<string, string>
+  success: (response?: unknown) => void
+  error: (message?: string, response?: unknown) => void
+}

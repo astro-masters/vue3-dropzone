@@ -5,6 +5,7 @@ export type {
   DropzoneErrorEvent,
   DropzoneErrorType,
   DropzoneFileItem,
+  DropzoneRemoveRequestEvent,
   DropzoneItem,
   DropzoneItemType,
   DropzoneMode,
@@ -12,6 +13,7 @@ export type {
   DropzoneSelectFileStrategy,
   DropzoneState,
   DropzoneStatus,
+  DropzoneUploadRequestEvent,
   DropzoneUrlItem,
 } from './types'
 
