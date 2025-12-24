@@ -27,7 +27,7 @@
           class="hidden"
           :id="fileInputId"
           :accept="accept"
-          @input="inputFiles"
+          @change="inputFiles"
           :multiple="multiple"
       />
 
@@ -96,98 +96,128 @@
   </div>
 </template>
 
-<script setup>
-import {computed, ref, watchEffect} from "vue";
-import PlaceholderImage from "./PlaceholderImage.vue";
-import PreviewSlot from "./PreviewSlot.vue";
+<script setup lang="ts">
+ import { computed, ref, watchEffect, type PropType } from 'vue'
+ import type {
+   DropzoneErrorEvent,
+   DropzoneFileItem,
+   DropzoneItem,
+   DropzoneMode,
+   DropzonePreviewPosition,
+   DropzoneSelectFileStrategy,
+   DropzoneState,
+ } from '../types'
+ import PlaceholderImage from './PlaceholderImage.vue'
+ import PreviewSlot from './PreviewSlot.vue'
 
-const props = defineProps({
-  modelValue: {
-    type: Array,
-    default: [],
-  },
-  multiple: {
-    type: Boolean,
-    default: false,
-  },
-  previews: {
-    type: Array,
-    default: [],
-  },
-  mode: {
-    type: String,
-    default: "drop",
-    validator(value) {
-      return ["drop", "preview", "edit"].includes(value);
-    },
-  },
-  disabled: {
-    type: Boolean,
-    default: false,
-  },
-  state: {
-    type: String,
-    validator(value) {
-      return ["error", "success", "indeterminate"].includes(value);
-    },
-    default: 'indeterminate'
-  },
-  accept: String,
-  maxFileSize: {
-    type: Number,
-    default: 5,
-  },
-  maxFiles: {
-    type: Number,
-    default: 5,
-  },
-  width: [Number, String],
-  height: [Number, String],
-  imgWidth: [Number, String],
-  imgHeight: [Number, String],
-  fileInputId: String,
-  previewWrapperClasses: String,
-  previewPosition: {
-    type: String,
-    default: "inside",
-    validator: (value) => ["inside", "outside"].includes(value),
-  },
-  showSelectButton: {
-    type: Boolean,
-    default: true,
-  },
-  selectFileStrategy: {
-    type: String,
-    default: "replace",
-    validator: (value) => ["replace", "merge"].includes(value),
-  },
-  serverSide: {
-    type: Boolean,
-    default: false,
-  },
-  uploadEndpoint: {
-    type: String,
-  },
-  deleteEndpoint: {
-    type: String,
-  },
-  headers: {
-    type: Object,
-    default: () => ({}),
-  },
-  allowSelectOnPreview: {
-    type: Boolean,
-    default: false
-  },
-  ignoreOriginalPreviews: {
-    type: Boolean,
-    default: false
-  }
-});
+ type FileInputLikeEvent = {
+   target: {
+     files: FileList | File[]
+   }
+ }
+
+ const props = defineProps({
+   modelValue: {
+     type: Array as PropType<DropzoneFileItem[]>,
+     default: () => [],
+   },
+   multiple: {
+     type: Boolean,
+     default: false,
+   },
+   previews: {
+     type: Array as PropType<string[]>,
+     default: () => [],
+   },
+   mode: {
+     type: String as PropType<DropzoneMode>,
+     default: 'drop',
+     validator(value: string) {
+       return ['drop', 'preview', 'edit'].includes(value)
+     },
+   },
+   disabled: {
+     type: Boolean,
+     default: false,
+   },
+   state: {
+     type: String as PropType<DropzoneState>,
+     validator(value: string) {
+       return ['error', 'success', 'indeterminate'].includes(value)
+     },
+     default: 'indeterminate',
+   },
+   accept: {
+     type: String,
+   },
+   maxFileSize: {
+     type: Number,
+     default: 5,
+   },
+   maxFiles: {
+     type: Number,
+     default: 5,
+   },
+   width: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   height: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   imgWidth: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   imgHeight: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   fileInputId: {
+     type: String,
+   },
+   previewWrapperClasses: {
+     type: String,
+     default: '',
+   },
+   previewPosition: {
+     type: String as PropType<DropzonePreviewPosition>,
+     default: 'inside',
+     validator: (value: string) => ['inside', 'outside'].includes(value),
+   },
+   showSelectButton: {
+     type: Boolean,
+     default: true,
+   },
+   selectFileStrategy: {
+     type: String as PropType<DropzoneSelectFileStrategy>,
+     default: 'replace',
+     validator: (value: string) => ['replace', 'merge'].includes(value),
+   },
+   serverSide: {
+     type: Boolean,
+     default: false,
+   },
+   uploadEndpoint: {
+     type: String,
+   },
+   deleteEndpoint: {
+     type: String,
+   },
+   headers: {
+     type: Object as PropType<Record<string, string>>,
+     default: () => ({}),
+   },
+   allowSelectOnPreview: {
+     type: Boolean,
+     default: false,
+   },
+   ignoreOriginalPreviews: {
+     type: Boolean,
+     default: false,
+   },
+ })
 
 // Unified data structure that combines both File objects and URL previews
-const unifiedItems = computed(() => {
-  const items = [];
+ const unifiedItems = computed<DropzoneItem[]>(() => {
+  const items: DropzoneItem[] = []
 
   // Add preview URLs first (existing images)
   const hasPreviewModeFiles = props.mode === "preview" && props.allowSelectOnPreview && files.value && files.value.length > 0;
@@ -223,9 +253,9 @@ const unifiedItems = computed(() => {
     files.value.forEach(fileItem => {
       if (fileItem && typeof fileItem === 'object') {
         items.push({
-          ...fileItem,
-          type: fileItem.isPreview ? 'url' : 'file', // Preview mode files should be treated as URL type for display
-          isPreview: Boolean(fileItem.isPreview)
+          ...(fileItem as DropzoneFileItem),
+          type: (fileItem as DropzoneFileItem).type,
+          isPreview: Boolean((fileItem as DropzoneFileItem).isPreview),
         });
       }
     });
@@ -234,7 +264,7 @@ const unifiedItems = computed(() => {
   return items;
 });
 
-const previewProps = computed(() => ({
+ const previewProps = computed(() => ({
   files: unifiedItems.value,
   previewUrls: [], // Legacy prop, no longer used
   multiple: props.multiple,
@@ -246,47 +276,46 @@ const previewProps = computed(() => ({
   removeFileBuiltIn: removeFile
 }));
 
-const emit = defineEmits([
-  "drop",
-  "update:modelValue",
-  "update:previews",
-  "error",
-  "fileUploaded",
-  "fileRemoved",
-  "previewRemoved",
-]);
+ const emit = defineEmits<{
+   (e: 'drop', event: DragEvent): void
+   (e: 'update:modelValue', value: DropzoneFileItem[]): void
+   (e: 'update:previews', value: string[]): void
+   (e: 'error', payload: DropzoneErrorEvent): void
+   (e: 'fileUploaded', payload: { file: DropzoneFileItem }): void
+   (e: 'fileRemoved', payload: DropzoneItem): void
+   (e: 'previewRemoved', payload: DropzoneItem): void
+ }>()
 
-const fileInput = ref(null);
-const files = ref([]);
-const active = ref(false);
-const dropzoneWrapper = ref(null);
-const previewsReplaced = ref(false); // Track if previews have been replaced
-const fileInputId = computed(() => {
-  if (props.fileInputId) return props.fileInputId;
-  return generateFileId();
-});
+ const fileInput = ref<HTMLInputElement | null>(null)
+ const files = ref<DropzoneFileItem[]>([])
+ const active = ref(false)
+ const dropzoneWrapper = ref<HTMLElement | null>(null)
+ const previewsReplaced = ref(false) // Track if previews have been replaced
+ const fileInputId = computed<string>(() => {
+   if (props.fileInputId) return props.fileInputId
+   return String(generateFileId())
+ })
 
-const fileInputAllowed = computed(() => {
-  return !props.disabled && (props.mode === "drop" || (props.mode === "preview" && props.allowSelectOnPreview) || props.mode === "edit")
-})
+ const fileInputAllowed = computed(() => {
+  return !props.disabled && (props.mode === 'drop' || (props.mode === 'preview' && props.allowSelectOnPreview) || props.mode === 'edit')
+ })
 
-const generateFileId = () => {
-  return Math.floor(Math.random() * Math.floor(Math.random() * Date.now()));
-};
+ const generateFileId = (): number => {
+  return Math.floor(Math.random() * Math.floor(Math.random() * Date.now()))
+ }
 
-// Manages input files
-const inputFiles = (e) => {
-  const allFiles = [...e.target.files].slice(0, props.maxFiles);
+ const processIncomingFiles = (incomingFiles: FileList | File[]): void => {
+  const allFiles = Array.from(incomingFiles).slice(0, props.maxFiles)
   const filesSizesAreValid = allFiles.map((item) => {
-    const itemSize = (item.size / 1024 / 1024).toFixed(2);
-    return itemSize <= props.maxFileSize;
-  });
+    const itemSize = Number((item.size / 1024 / 1024).toFixed(2))
+    return itemSize <= props.maxFileSize
+  })
   const filesTypesAreValid = allFiles.map((item) => {
     if (props.accept) {
-      return props.accept.includes(item.type);
+      return props.accept.includes(item.type)
     }
-    return [];
-  });
+    return true
+  })
 
   if (
       (filesSizesAreValid.every((item) => item === true) &&
@@ -294,18 +323,18 @@ const inputFiles = (e) => {
           filesTypesAreValid.every((item) => item === true)) ||
       !props.accept && filesSizesAreValid.every((item) => item === true)
   ) {
-    const processFile = (file) => ({
-      file: file,
+    const processFile = (file: File): DropzoneFileItem => ({
+      file,
       id: generateFileId(),
       src: URL.createObjectURL(file),
       progress: 0,
-      status: "pending",
+      status: 'pending',
       message: null,
       name: file.name,
       size: file.size,
       type: 'file',
-      isPreview: false
-    });
+      isPreview: false,
+    })
 
     // Use selectFileStrategy for all modes
     const strategy = props.selectFileStrategy;
@@ -313,182 +342,186 @@ const inputFiles = (e) => {
     // Handle preview mode with allowSelectOnPreview differently
     if (props.mode === "preview" && props.allowSelectOnPreview) {
       // In preview mode, store files with metadata but treat them as previews
-      const processFile = (file) => {
+      const processPreviewFile = (file: File): DropzoneFileItem | null => {
         if (!file || !(file instanceof File)) {
-          return null;
+          return null
         }
         return {
-          file: file,
+          file,
           id: generateFileId(),
           src: URL.createObjectURL(file),
           progress: 100,
-          status: "success",
+          status: 'success',
           message: null,
           name: file.name || 'Unknown file',
           size: file.size || 0,
           type: 'file',
-          isPreview: true
-        };
-      };
+          isPreview: true,
+        }
+      }
 
-      const processedFiles = allFiles.map(processFile).filter(Boolean);
+      const processedFiles = allFiles.map(processPreviewFile).filter(Boolean) as DropzoneFileItem[]
 
       if (strategy === "replace") {
-        files.value = processedFiles;
+        files.value = processedFiles
         // Clear original preview URLs when replacing (handled internally)
         previewsReplaced.value = true;
       }
       if (strategy === "merge") {
-        files.value = [...files.value, ...processedFiles];
+        files.value = [...files.value, ...processedFiles]
         // Keep original preview URLs when merging
       }
     } else {
       // Normal mode - add to files array
       if (strategy === "replace") {
-        files.value = allFiles.map(processFile);
+        files.value = allFiles.map(processFile)
         // In edit mode, also clear previews if replacing
         if (props.mode === "edit") {
-          emit("update:previews", []);
+          emit('update:previews', [])
         }
       }
       if (strategy === "merge") {
-        files.value = [...files.value, ...allFiles.map(processFile)];
+        files.value = [...files.value, ...allFiles.map(processFile)]
       }
     }
   }
 
   if (filesSizesAreValid.some((item) => item !== true)) {
     const largeFiles = allFiles.filter((item) => {
-      const itemSize = (item.size / 1024 / 1024).toFixed(2);
-      return itemSize > props.maxFileSize;
+      const itemSize = Number((item.size / 1024 / 1024).toFixed(2))
+      return itemSize > props.maxFileSize
     });
-    handleFileError("file-too-large", largeFiles);
+    handleFileError('file-too-large', largeFiles)
   }
 
   if (props.accept && filesTypesAreValid.some((item) => item !== true)) {
+    const accept = props.accept
     const wrongTypeFiles = allFiles.filter(
-        (item) => !props.accept.includes(item.type)
+        (item) => (accept ? !accept.includes(item.type) : false)
     );
-    handleFileError("invalid-file-format", wrongTypeFiles);
+    handleFileError('invalid-file-format', wrongTypeFiles)
   }
 
   files.value
-      .filter((fileItem) => fileItem.status !== "success" && !fileItem.isPreview)
+      .filter((fileItem) => fileItem.status !== 'success' && !fileItem.isPreview)
       .forEach((fileItem) => {
         // Upload files to server (only for non-preview modes)
         if (props.serverSide && props.mode !== "preview") {
-          uploadFileToServer(fileItem);
+          uploadFileToServer(fileItem)
         } else if (props.mode !== "preview") {
-          fileItem.progress = 100;
-          fileItem.status = "success";
-          fileItem.message = "File uploaded successfully";
-          emit("fileUploaded", {file: fileItem});
+          fileItem.progress = 100
+          fileItem.status = 'success'
+          fileItem.message = 'File uploaded successfully'
+          emit('fileUploaded', { file: fileItem })
         }
       });
-};
+}
+
+// Manages input files
+ const inputFiles = (e: Event): void => {
+  const target = e.target as HTMLInputElement | null
+  const incomingFiles = target?.files
+  if (!incomingFiles) return
+  processIncomingFiles(incomingFiles)
+ }
 
 // Upload file to server
-const uploadFileToServer = (fileItem) => {
+const uploadFileToServer = (fileItem: DropzoneFileItem): void => {
   const xhr = new XMLHttpRequest();
-  xhr.open("POST", props.uploadEndpoint || '', true);
+  xhr.open('POST', props.uploadEndpoint || '', true)
 
   // Set headers
   Object.keys(props.headers).forEach((key) => {
-    xhr.setRequestHeader(key, props.headers[key]);
-  });
+    xhr.setRequestHeader(key, props.headers[key])
+  })
 
   const formData = new FormData();
-  formData.append("file", fileItem.file);
+  formData.append('file', fileItem.file)
 
   // Start upload
   xhr.upload.onloadstart = () => {
-    fileItem.status = "uploading";
-    fileItem.message = "Upload in progress";
+    fileItem.status = 'uploading'
+    fileItem.message = 'Upload in progress'
   };
 
   // Upload progress
   xhr.upload.onprogress = (event) => {
     if (event.lengthComputable) {
-      fileItem.progress = Math.round((event.loaded / event.total) * 100);
+      fileItem.progress = Math.round((event.loaded / event.total) * 100)
     }
   };
 
   // Upload success
   xhr.onload = () => {
     if (xhr.status === 200) {
-      fileItem.status = "success";
-      fileItem.message = "File uploaded successfully";
-      emit("fileUploaded", {file: fileItem});
+      fileItem.status = 'success'
+      fileItem.message = 'File uploaded successfully'
+      emit('fileUploaded', { file: fileItem })
     } else {
-      fileItem.status = "error";
-      fileItem.message = xhr.statusText;
-      handleFileError("upload-error", [fileItem.file]);
+      fileItem.status = 'error'
+      fileItem.message = xhr.statusText
+      handleFileError('upload-error', [fileItem.file])
     }
   };
 
   // Upload error
   xhr.onerror = () => {
-    fileItem.status = "error";
-    fileItem.message = "Upload failed";
-    handleFileError("upload-error", [fileItem.file]);
+    fileItem.status = 'error'
+    fileItem.message = 'Upload failed'
+    handleFileError('upload-error', [fileItem.file])
   };
 
   // Send file to server
-  xhr.send(formData);
+  xhr.send(formData)
 };
 
 // Toggles active state for dropping files(styles)
-const toggleActive = () => {
+const toggleActive = (): void => {
   if (fileInputAllowed.value) {
-    active.value = !active.value;
+    active.value = !active.value
   }
 };
 
 // Handles dropped files and input them
-const drop = (e) => {
-  toggleActive();
+const drop = (e: DragEvent): void => {
+  toggleActive()
   if (fileInputAllowed.value) {
-    const files = {
-      target: {
-        files: [...e.dataTransfer.files],
-      },
-    };
-    emit("drop", e);
-    inputFiles(files);
+    emit('drop', e)
+    processIncomingFiles(e.dataTransfer ? [...e.dataTransfer.files] : [])
   }
 };
 
 // Enhanced removeFile to handle both types
-const removeFile = (item) => {
+const removeFile = (item: DropzoneItem): void => {
   if (!item || !item.id) {
-    return;
+    return
   }
 
-  if (item.type === 'url') {
+  if (item.type === 'url' && typeof item.id === 'string' && item.id.startsWith('preview-')) {
     // Remove from previews array (original URL previews)
-    const currentPreviews = [...(props.previews || [])];
-    const previewIndex = parseInt(item.id.replace('preview-', ''));
+    const currentPreviews = [...(props.previews || [])]
+    const previewIndex = parseInt(item.id.replace('preview-', ''), 10)
     if (!isNaN(previewIndex) && previewIndex >= 0 && previewIndex < currentPreviews.length) {
-      currentPreviews.splice(previewIndex, 1);
-      emit("update:previews", currentPreviews);
-      emit("previewRemoved", item);
+      currentPreviews.splice(previewIndex, 1)
+      emit('update:previews', currentPreviews)
+      emit('previewRemoved', item)
     }
   } else if (item.isPreview) {
     // Remove preview mode files from files array
-    removeFileFromList(item);
+    removeFileFromList(item)
   } else {
     // Handle regular file removal
     if (props.serverSide) {
-      removeFileFromServer(item);
+      removeFileFromServer(item)
     } else {
-      removeFileFromList(item);
+      removeFileFromList(item)
     }
   }
 };
 
-const removeFileFromServer = (item) => {
+const removeFileFromServer = (item: DropzoneItem): void => {
   const xhr = new XMLHttpRequest();
-  xhr.open("DELETE", props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : '', true);
+  xhr.open('DELETE', props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : '', true)
 
   // Set headers
   Object.keys(props.headers).forEach((key) => {
@@ -497,61 +530,61 @@ const removeFileFromServer = (item) => {
 
   xhr.onload = () => {
     if (xhr.status === 200) {
-      removeFileFromList(item);
+      removeFileFromList(item)
     } else {
-      handleFileError("delete-error", [item]);
+      handleFileError('delete-error', [item])
     }
   };
 
   xhr.onerror = () => {
-    handleFileError("delete-error", [item]);
+    handleFileError('delete-error', [item])
   };
 
-  xhr.send();
+  xhr.send()
 };
 
-const removeFileFromList = (item) => {
+const removeFileFromList = (item: DropzoneItem): void => {
   if (!item || !item.id) {
     return;
   }
 
-  files.value = files.value.filter((file) => file && file.id !== item.id);
+  files.value = files.value.filter((file) => file && file.id !== item.id)
 
   if (fileInput.value) {
-    fileInput.value.value = "";
+    fileInput.value.value = ''
   }
 
-  emit("fileRemoved", item);
-  emit("update:modelValue", files.value);
+  emit('fileRemoved', item)
+  emit('update:modelValue', files.value)
 };
 
 // Hover and blur manager
-const hover = () => {
+const hover = (): void => {
   if (fileInputAllowed.value) {
-    active.value = true;
+    active.value = true
   }
 };
-const blurDrop = () => {
-  active.value = false;
+const blurDrop = (): void => {
+  active.value = false
 };
 
 // Opens os selecting file window
-const openSelectFile = (e) => {
+const openSelectFile = (e: MouseEvent): void => {
   if (fileInputAllowed.value) {
-    fileInput.value.click();
+    fileInput.value?.click()
   } else {
-    e.preventDefault();
+    e.preventDefault()
   }
 };
 
 // Handles file errors
-const handleFileError = (type, files) => {
-  emit("error", {type: type, files: files});
+const handleFileError = (type: DropzoneErrorEvent['type'], files: unknown[]): void => {
+  emit('error', { type, files })
 };
 
 watchEffect(() => {
   if (files.value && files.value.length) {
-    emit("update:modelValue", files.value);
+    emit('update:modelValue', files.value)
   }
 });
 
@@ -568,12 +601,12 @@ const clearPreview = () => {
 
 // Public methods for programmatic control
 const clearFiles = () => {
-  files.value = [];
-  emit("update:modelValue", []);
+  files.value = []
+  emit('update:modelValue', [])
 };
 
 const clearPreviews = () => {
-  emit("update:previews", []);
+  emit('update:previews', [])
 };
 
 const clearAll = () => {
@@ -589,7 +622,7 @@ defineExpose({
 });
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 * {
   font-family: sans-serif;
 }

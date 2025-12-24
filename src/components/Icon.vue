@@ -72,10 +72,10 @@
   </svg>
 </template>
 
-<script setup>
-const props = defineProps({
-  name: String
-})
+<script setup lang="ts">
+  defineProps<{
+    name?: string
+  }>()
 </script>
 
 <style scoped lang="scss">

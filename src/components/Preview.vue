@@ -67,9 +67,9 @@
         </button>
         
         <!-- File details overlay -->
-        <div class="img-details" v-if="allowSelectOnPreview && mode !== 'preview'">
-          <h2 v-if="item.name || (item.file && item.file.name)">{{ item.name || item.file.name }}</h2>
-          <span v-if="item.size || (item.file && item.file.size)">{{ formatSize(item.size || item.file.size) }}</span>
+        <div class="img-details" v-if="allowSelectOnPreview && mode !== 'preview' && item.type === 'file' && item.file">
+          <h2 v-if="item.name || item.file.name">{{ item.name || item.file.name }}</h2>
+          <span v-if="item.size || item.file.size">{{ formatSize(item.size || item.file.size) }}</span>
         </div>
         
         <!-- Remove button for URL previews (outside of img-details to be always visible) -->
@@ -118,54 +118,67 @@
   </div>
 </template>
 
-<script setup>
-import Icon from "./Icon.vue";
+<script setup lang="ts">
+ import type { PropType } from 'vue'
+ import type { DropzoneItem, DropzoneMode } from '../types'
+ import Icon from './Icon.vue'
 
-const props = defineProps({
-  files: {
-    type: Array,
-    default: [],
-  },
-  previewUrls: {
-    type: Array,
-    default: [], // Legacy prop, kept for backward compatibility
-  },
-  multiple: {
-    type: Boolean,
-    default: false,
-  },
-  mode: {
-    type: String,
-    default: "drop",
-    validator(value) {
-      return ["drop", "preview", "edit"].includes(value);
-    },
-  },
-  allowSelectOnPreview: Boolean,
-  imgWidth: [Number, String],
-  imgHeight: [Number, String],
-  previewWrapperClasses: String,
-  removeFileBuiltIn: Function
-});
+ const props = defineProps({
+   files: {
+     type: Array as PropType<DropzoneItem[]>,
+     default: () => [],
+   },
+   previewUrls: {
+     type: Array as PropType<string[]>,
+     default: () => [],
+   },
+   multiple: {
+     type: Boolean,
+     default: false,
+   },
+   mode: {
+     type: String as PropType<DropzoneMode>,
+     default: 'drop',
+     validator(value: string) {
+       return ['drop', 'preview', 'edit'].includes(value)
+     },
+   },
+   allowSelectOnPreview: {
+     type: Boolean,
+     default: false,
+   },
+   imgWidth: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   imgHeight: {
+     type: [Number, String] as PropType<number | string | undefined>,
+   },
+   previewWrapperClasses: {
+     type: [String, Array, Object] as PropType<string | string[] | Record<string, boolean>>,
+     default: '',
+   },
+   removeFileBuiltIn: {
+     type: Function as PropType<((item: DropzoneItem) => void) | undefined>,
+   },
+ })
 
-const emit = defineEmits(["removeFile", "click"]);
+ const emit = defineEmits<{
+   (e: 'removeFile', item: DropzoneItem): void
+   (e: 'click', event: MouseEvent): void
+ }>()
 
-// Formats file size
-const formatSize = (size) => {
-  if (!size) return "Unknown size";
-  const i = Math.floor(Math.log(size) / Math.log(1024));
-  return (
-      (size / Math.pow(1024, i)).toFixed(2) * 1 + " " + ["B", "KB", "MB", "GB"][i]
-  );
-};
+ const formatSize = (size?: number): string => {
+   if (!size) return 'Unknown size'
+   const i = Math.floor(Math.log(size) / Math.log(1024))
+   return `${Number((size / Math.pow(1024, i)).toFixed(2))} ${['B', 'KB', 'MB', 'GB'][i]}`
+ }
 
-// Removes file from files list
-const removeFile = (item) => {
-  emit("removeFile", item);
-};
-</script>
+ const removeFile = (item: DropzoneItem): void => {
+   emit('removeFile', item)
+ }
+ </script>
 
-<style scoped>
+<style scoped lang="scss">
 .preview-container {
   width: 100%;
   height: 100%;

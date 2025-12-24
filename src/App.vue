@@ -4,12 +4,13 @@
   </form>
 </template>
 
-<script setup>
-import {ref} from 'vue'
+<script setup lang="ts">
+import { ref } from 'vue'
 import Vue3Dropzone from './components/Vue3Dropzone.vue'
+import type { DropzoneFileItem } from './types'
 
-const sampleFiles = ref([]);
+const sampleFiles = ref<DropzoneFileItem[]>([])
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 </style>
