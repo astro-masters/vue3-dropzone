@@ -20,7 +20,7 @@
         @click="openSelectFile"
         id="dropzoneWrapper"
     >
-      <!-- Input -->
+      <!-- Input (выбор файла) -->
       <input
           type="file"
           ref="fileInput"
@@ -31,14 +31,14 @@
           :multiple="multiple"
       />
 
-      <!-- Placeholder content -->
+      <!-- Контент-заглушка -->
       <template v-if="!unifiedItems.length || previewPosition === 'outside'">
         <slot name="placeholder-img">
           <PlaceholderImage/>
         </slot>
         <slot name="title">
           <div class="titles">
-            <h1 class="m-0">Drop your files here</h1>
+            <h1 class="m-0">Перетащите файлы сюда</h1>
           </div>
         </slot>
         <slot name="button" :fileInput="fileInput">
@@ -47,18 +47,18 @@
               v-if="showSelectButton"
               class="select-file"
           >
-            Select File
+            Выбрать файл
           </button>
         </slot>
         <slot name="description">
           <p class="m-0 description">
-            Files must be under {{ maxFileSize }}MB
-            {{ accept ? `and in ${accept} formats` : "" }}
+            Файлы должны быть не больше {{ maxFileSize }}MB
+            {{ accept ? `и в форматах ${accept}` : "" }}
           </p>
         </slot>
       </template>
 
-      <!-- Files previews inside -->
+      <!-- Предпросмотр файлов внутри -->
       <PreviewSlot
           v-if="previewPosition === 'inside' && unifiedItems.length"
           v-bind="previewProps"
@@ -79,7 +79,7 @@
         @dragover.prevent
         v-if="disabled"
     ></div>
-    <!-- Files previews outside -->
+    <!-- Предпросмотр файлов снаружи -->
     <div class="mt-5"
          v-if="previewPosition === 'outside' && unifiedItems.length">
       <PreviewSlot
@@ -215,17 +215,17 @@
    },
  })
 
-// Unified data structure that combines both File objects and URL previews
+// Единая структура данных, объединяющая и объекты File, и URL-предпросмотры
  const unifiedItems = computed<DropzoneItem[]>(() => {
   const items: DropzoneItem[] = []
 
-  // Add preview URLs first (existing images)
+  // Сначала добавляем URL предпросмотра (существующие изображения)
   const hasPreviewModeFiles = props.mode === "preview" && props.allowSelectOnPreview && files.value && files.value.length > 0;
 
-  // Show original previews if:
-  // 1. Merge strategy is used (always show originals)
-  // 2. Replace strategy but ignoreOriginalPreviews is false and no new files selected
-  // 3. Not in preview mode or no files selected
+  // Показывать исходные предпросмотры если:
+  // 1. Используется стратегия merge (всегда показываем исходные)
+  // 2. Используется replace, но ignoreOriginalPreviews выключен и новые файлы не выбраны
+  // 3. Мы не в preview режиме или файлы не выбраны
   const shouldShowOriginalPreviews = props.selectFileStrategy === "merge" ||
       (props.selectFileStrategy === "replace" && !hasPreviewModeFiles && (!previewsReplaced.value || !props.ignoreOriginalPreviews)) ||
       (props.mode !== "preview" || !props.allowSelectOnPreview);
@@ -238,8 +238,8 @@
           src: url,
           type: 'url',
           isPreview: true,
-          name: `Image ${index + 1}`,
-          size: 0, // URL previews don't have size info
+          name: `Изображение ${index + 1}`,
+          size: 0, // Для URL предпросмотров нет информации о размере
           progress: 100,
           status: 'success',
           message: null
@@ -248,7 +248,7 @@
     });
   }
 
-  // Add actual file objects
+  // Добавляем реальные File объекты
   if (files.value && Array.isArray(files.value) && files.value.length > 0) {
     files.value.forEach(fileItem => {
       if (fileItem && typeof fileItem === 'object') {
@@ -266,7 +266,7 @@
 
  const previewProps = computed(() => ({
   files: unifiedItems.value,
-  previewUrls: [], // Legacy prop, no longer used
+  previewUrls: [], // Устаревший prop, больше не используется
   multiple: props.multiple,
   mode: props.mode,
   allowSelectOnPreview: props.mode !== "preview" || props.allowSelectOnPreview,
@@ -290,7 +290,7 @@
  const files = ref<DropzoneFileItem[]>([])
  const active = ref(false)
  const dropzoneWrapper = ref<HTMLElement | null>(null)
- const previewsReplaced = ref(false) // Track if previews have been replaced
+ const previewsReplaced = ref(false) // Отмечаем, что исходные предпросмотры были заменены
  const fileInputId = computed<string>(() => {
    if (props.fileInputId) return props.fileInputId
    return String(generateFileId())
@@ -336,12 +336,12 @@
       isPreview: false,
     })
 
-    // Use selectFileStrategy for all modes
+    // Используем selectFileStrategy для всех режимов
     const strategy = props.selectFileStrategy;
 
-    // Handle preview mode with allowSelectOnPreview differently
+    // В preview режиме с allowSelectOnPreview работаем немного иначе
     if (props.mode === "preview" && props.allowSelectOnPreview) {
-      // In preview mode, store files with metadata but treat them as previews
+      // В preview режиме храним файлы с метаданными, но считаем их предпросмотрами
       const processPreviewFile = (file: File): DropzoneFileItem | null => {
         if (!file || !(file instanceof File)) {
           return null
@@ -353,7 +353,7 @@
           progress: 100,
           status: 'success',
           message: null,
-          name: file.name || 'Unknown file',
+          name: file.name || 'Неизвестный файл',
           size: file.size || 0,
           type: 'file',
           isPreview: true,
@@ -364,18 +364,18 @@
 
       if (strategy === "replace") {
         files.value = processedFiles
-        // Clear original preview URLs when replacing (handled internally)
+        // При replace скрываем исходные URL предпросмотра (обрабатывается внутри)
         previewsReplaced.value = true;
       }
       if (strategy === "merge") {
         files.value = [...files.value, ...processedFiles]
-        // Keep original preview URLs when merging
+        // При merge оставляем исходные URL предпросмотра
       }
     } else {
-      // Normal mode - add to files array
+      // Обычный режим — добавляем в массив files
       if (strategy === "replace") {
         files.value = allFiles.map(processFile)
-        // In edit mode, also clear previews if replacing
+        // В edit режиме при replace также очищаем previews
         if (props.mode === "edit") {
           emit('update:previews', [])
         }
@@ -405,19 +405,19 @@
   files.value
       .filter((fileItem) => fileItem.status !== 'success' && !fileItem.isPreview)
       .forEach((fileItem) => {
-        // Upload files to server (only for non-preview modes)
+        // Загружаем файлы на сервер (только не для preview режима)
         if (props.serverSide && props.mode !== "preview") {
           uploadFileToServer(fileItem)
         } else if (props.mode !== "preview") {
           fileItem.progress = 100
           fileItem.status = 'success'
-          fileItem.message = 'File uploaded successfully'
+          fileItem.message = 'Файл успешно загружен'
           emit('fileUploaded', { file: fileItem })
         }
       });
 }
 
-// Manages input files
+// Обработка файлов, выбранных через input
  const inputFiles = (e: Event): void => {
   const target = e.target as HTMLInputElement | null
   const incomingFiles = target?.files
@@ -425,12 +425,12 @@
   processIncomingFiles(incomingFiles)
  }
 
-// Upload file to server
+// Загрузка файла на сервер
 const uploadFileToServer = (fileItem: DropzoneFileItem): void => {
   const xhr = new XMLHttpRequest();
   xhr.open('POST', props.uploadEndpoint || '', true)
 
-  // Set headers
+  // Заголовки
   Object.keys(props.headers).forEach((key) => {
     xhr.setRequestHeader(key, props.headers[key])
   })
@@ -438,24 +438,24 @@ const uploadFileToServer = (fileItem: DropzoneFileItem): void => {
   const formData = new FormData();
   formData.append('file', fileItem.file)
 
-  // Start upload
+  // Старт загрузки
   xhr.upload.onloadstart = () => {
     fileItem.status = 'uploading'
-    fileItem.message = 'Upload in progress'
+    fileItem.message = 'Идёт загрузка'
   };
 
-  // Upload progress
+  // Прогресс загрузки
   xhr.upload.onprogress = (event) => {
     if (event.lengthComputable) {
       fileItem.progress = Math.round((event.loaded / event.total) * 100)
     }
   };
 
-  // Upload success
+  // Успешная загрузка
   xhr.onload = () => {
     if (xhr.status === 200) {
       fileItem.status = 'success'
-      fileItem.message = 'File uploaded successfully'
+      fileItem.message = 'Файл успешно загружен'
       emit('fileUploaded', { file: fileItem })
     } else {
       fileItem.status = 'error'
@@ -464,25 +464,25 @@ const uploadFileToServer = (fileItem: DropzoneFileItem): void => {
     }
   };
 
-  // Upload error
+  // Ошибка загрузки
   xhr.onerror = () => {
     fileItem.status = 'error'
-    fileItem.message = 'Upload failed'
+    fileItem.message = 'Загрузка не удалась'
     handleFileError('upload-error', [fileItem.file])
   };
 
-  // Send file to server
+  // Отправляем файл на сервер
   xhr.send(formData)
 };
 
-// Toggles active state for dropping files(styles)
+// Переключаем активное состояние (стили) для режима drag'n'drop
 const toggleActive = (): void => {
   if (fileInputAllowed.value) {
     active.value = !active.value
   }
 };
 
-// Handles dropped files and input them
+// Обработка drop файлов
 const drop = (e: DragEvent): void => {
   toggleActive()
   if (fileInputAllowed.value) {
@@ -491,14 +491,14 @@ const drop = (e: DragEvent): void => {
   }
 };
 
-// Enhanced removeFile to handle both types
+// Расширенный removeFile для обработки разных типов элементов
 const removeFile = (item: DropzoneItem): void => {
   if (!item || !item.id) {
     return
   }
 
   if (item.type === 'url' && typeof item.id === 'string' && item.id.startsWith('preview-')) {
-    // Remove from previews array (original URL previews)
+    // Удаляем из массива previews (исходные URL предпросмотры)
     const currentPreviews = [...(props.previews || [])]
     const previewIndex = parseInt(item.id.replace('preview-', ''), 10)
     if (!isNaN(previewIndex) && previewIndex >= 0 && previewIndex < currentPreviews.length) {
@@ -507,10 +507,10 @@ const removeFile = (item: DropzoneItem): void => {
       emit('previewRemoved', item)
     }
   } else if (item.isPreview) {
-    // Remove preview mode files from files array
+    // Удаляем файлы preview-режима из массива files
     removeFileFromList(item)
   } else {
-    // Handle regular file removal
+    // Обычное удаление файлов
     if (props.serverSide) {
       removeFileFromServer(item)
     } else {
@@ -523,7 +523,7 @@ const removeFileFromServer = (item: DropzoneItem): void => {
   const xhr = new XMLHttpRequest();
   xhr.open('DELETE', props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : '', true)
 
-  // Set headers
+  // Заголовки
   Object.keys(props.headers).forEach((key) => {
     xhr.setRequestHeader(key, props.headers[key]);
   });
@@ -558,7 +558,7 @@ const removeFileFromList = (item: DropzoneItem): void => {
   emit('update:modelValue', files.value)
 };
 
-// Hover and blur manager
+// Управление hover/blur
 const hover = (): void => {
   if (fileInputAllowed.value) {
     active.value = true
@@ -568,7 +568,7 @@ const blurDrop = (): void => {
   active.value = false
 };
 
-// Opens os selecting file window
+// Открываем системное окно выбора файла
 const openSelectFile = (e: MouseEvent): void => {
   if (fileInputAllowed.value) {
     fileInput.value?.click()
@@ -577,7 +577,7 @@ const openSelectFile = (e: MouseEvent): void => {
   }
 };
 
-// Handles file errors
+// Обработка ошибок файлов
 const handleFileError = (type: DropzoneErrorEvent['type'], files: unknown[]): void => {
   emit('error', { type, files })
 };
@@ -588,7 +588,7 @@ watchEffect(() => {
   }
 });
 
-// Reset previewsReplaced when ignoreOriginalPreviews is false and no files are selected
+// Сбрасываем previewsReplaced, когда ignoreOriginalPreviews выключен и файлы не выбраны
 watchEffect(() => {
   if (props.ignoreOriginalPreviews === false && (!files.value || !Array.isArray(files.value) || files.value.length === 0)) {
     previewsReplaced.value = false;
@@ -599,7 +599,7 @@ const clearPreview = () => {
   unifiedItems.value.forEach((item) => removeFile(item));
 };
 
-// Public methods for programmatic control
+// Публичные методы для программного управления
 const clearFiles = () => {
   files.value = []
   emit('update:modelValue', [])

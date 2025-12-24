@@ -24,29 +24,29 @@
         }"
           @click.stop
       >
-        <!-- For actual File objects -->
+        <!-- Для реальных объектов File -->
         <img
             :src="item.src"
             :alt="item.name || (item.file && item.file.name)"
             v-if="item.type === 'file' && item.file && item.file.type && item.file.type.includes('image/')"
             @click.stop
         />
-        
-        <!-- For URL previews -->
+
+        <!-- Для URL-предпросмотров -->
         <img
             :src="item.src"
             :alt="item.name"
             v-if="item.type === 'url'"
             @click.stop
         />
-        
-        <!-- File type icon for non-images -->
+
+        <!-- Иконка типа файла для не-изображений -->
         <Icon
             :name="item.file ? item.file.name.split('.').pop() : 'file'"
             v-if="item.type === 'file' && item.file && item.file.type && (!item.file.type.includes('image/') && !item.file.type.includes('video/'))"
         />
-        
-        <!-- Remove button (outside of img-details to be always visible) -->
+
+        <!-- Кнопка удаления (вынесена из img-details, чтобы быть всегда доступной) -->
         <button type="button" class="img-remove" v-if="(allowSelectOnPreview || mode === 'edit') && item.type !== 'url'" @click.stop="removeFileBuiltIn ? removeFileBuiltIn(item) : removeFile(item)">
           <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -65,14 +65,14 @@
             <path d="M6 6l12 12"/>
           </svg>
         </button>
-        
-        <!-- File details overlay -->
+
+        <!-- Оверлей с деталями файла -->
         <div class="img-details" v-if="allowSelectOnPreview && mode !== 'preview' && item.type === 'file' && item.file">
           <h2 v-if="item.name || item.file.name">{{ item.name || item.file.name }}</h2>
           <span v-if="item.size || item.file.size">{{ formatSize(item.size || item.file.size) }}</span>
         </div>
-        
-        <!-- Remove button for URL previews (outside of img-details to be always visible) -->
+
+        <!-- Кнопка удаления для URL-предпросмотров (вынесена из img-details, чтобы быть всегда доступной) -->
         <button type="button" class="img-remove" v-if="item.type === 'url' && (allowSelectOnPreview || mode === 'edit')" @click.stop="removeFileBuiltIn ? removeFileBuiltIn(item) : removeFile(item)">
           <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -91,14 +91,14 @@
             <path d="M6 6l12 12"/>
           </svg>
         </button>
-        
-        <!-- Preview details overlay for URL previews -->
+
+        <!-- Оверлей с деталями для URL-предпросмотров -->
         <div class="img-details" v-if="item.type === 'url' && allowSelectOnPreview">
           <h2 v-if="item.name">{{ item.name }}</h2>
           <span v-if="item.size">{{ formatSize(item.size) }}</span>
         </div>
-        
-        <!-- Progress bar for file uploads -->
+
+        <!-- Прогресс-бар загрузки файла -->
         <div
             class="progress-bar-container"
             v-if="item.type === 'file' && (item.status === 'pending' || item.status === 'uploading')"
@@ -168,7 +168,7 @@
  }>()
 
  const formatSize = (size?: number): string => {
-   if (!size) return 'Unknown size'
+   if (!size) return 'Размер неизвестен'
    const i = Math.floor(Math.log(size) / Math.log(1024))
    return `${Number((size / Math.pow(1024, i)).toFixed(2))} ${['B', 'KB', 'MB', 'GB'][i]}`
  }
