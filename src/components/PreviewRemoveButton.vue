@@ -1,5 +1,5 @@
 <template>
-  <button type="button" class="img-remove" @click.stop="$emit('click', $event)">
+  <button type="button" class="img-remove" @click.stop="$emit('click', $event)" :disabled="disabled">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="20"
@@ -20,6 +20,13 @@
 </template>
 
 <script setup lang="ts">
+ defineProps({
+   disabled: {
+     type: Boolean,
+     default: false,
+   },
+ })
+
  defineEmits<{
    (e: 'click', event: MouseEvent): void
  }>()

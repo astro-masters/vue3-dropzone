@@ -8,7 +8,7 @@ export type DropzonePreviewPosition = 'inside' | 'outside'
 
 export type DropzoneItemType = 'file' | 'url'
 
-export type DropzoneStatus = 'pending' | 'uploading' | 'success' | 'error'
+export type DropzoneStatus = 'pending' | 'uploading' | 'success' | 'error' | 'deleting'
 
 export interface DropzoneBaseItem {
   id: string | number

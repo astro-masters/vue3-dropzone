@@ -138,6 +138,7 @@ const previews = ref<string[]>([])
     v-model="files"
     :server-side="true"
     upload-endpoint="https://api.example.com/upload"
+    server-file-id-key="file_id"
     :headers="{ Authorization: `Bearer ${token}` }"
     @upload-request="onUploadRequest"
   />
@@ -153,14 +154,14 @@ const files = ref<DropzoneFileItem[]>([])
 
 const onUploadRequest = async (e: DropzoneUploadRequestEvent) => {
   try {
-    await axios.post(e.endpoint, e.formData, {
+    const response = await axios.post(e.endpoint, e.formData, {
       headers: e.headers,
       onUploadProgress: (pe) => {
         if (!pe.total) return
         e.progress((pe.loaded / pe.total) * 100)
       },
     })
-    e.success()
+    e.success(response?.data)
   } catch (err: any) {
     e.error(err?.message ?? 'Загрузка не удалась', err)
   }
@@ -291,6 +292,7 @@ const onRemoveRequest = async (e: DropzoneRemoveRequestEvent) => {
 | `serverSide`     | `Boolean` | `false`     | Включить серверную загрузку с отслеживанием прогресса.               |
 | `uploadEndpoint` | `String`  | `undefined` | URL эндпоинта для загрузки файлов (когда `serverSide` включён).      |
 | `deleteEndpoint` | `String`  | `undefined` | URL эндпоинта для удаления файлов (когда `serverSide` включён).      |
+| `serverFileIdKey` | `String` | `undefined` | Ключ/путь в ответе загрузки для замены `fileItem.id` (например `file_id`, `data.file_id`). |
 | `headers`        | `Object`  | `{}`        | Дополнительные HTTP-заголовки для запросов к серверу.                |
 
 ## 🔄 Справочник событий

@@ -139,6 +139,7 @@ This approach lets you use `axios`, `fetch`, custom auth, custom API contracts, 
     v-model="files"
     :server-side="true"
     upload-endpoint="https://api.example.com/upload"
+    server-file-id-key="file_id"
     :headers="{ Authorization: `Bearer ${token}` }"
     @upload-request="onUploadRequest"
   />
@@ -154,14 +155,14 @@ const files = ref<DropzoneFileItem[]>([])
 
 const onUploadRequest = async (e: DropzoneUploadRequestEvent) => {
   try {
-    await axios.post(e.endpoint, e.formData, {
+    const response = await axios.post(e.endpoint, e.formData, {
       headers: e.headers,
       onUploadProgress: (pe) => {
         if (!pe.total) return
         e.progress((pe.loaded / pe.total) * 100)
       },
     })
-    e.success()
+    e.success(response?.data)
   } catch (err: any) {
     e.error(err?.message ?? 'Upload failed', err)
   }
@@ -292,6 +293,7 @@ For non-image files the preview shows a file type icon and the filename. File ty
 | `serverSide`     | `Boolean` | `false`     | Enable server-side file upload functionality with progress tracking. |
 | `uploadEndpoint` | `String`  | `undefined` | URL endpoint for file uploads when serverSide is enabled.            |
 | `deleteEndpoint` | `String`  | `undefined` | URL endpoint for file deletion when serverSide is enabled.           |
+| `serverFileIdKey` | `String` | `undefined` | Key/path in upload response used to replace `fileItem.id` (e.g. `file_id`, `data.file_id`). |
 | `headers`        | `Object`  | `{}`        | Additional HTTP headers to send with server requests.                |
 
 ## 🔄 Events Reference

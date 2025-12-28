@@ -25,28 +25,36 @@
 				@click.stop
 			>
 				<!-- Для реальных объектов File -->
-				<img
-					:src="item.src"
-					:alt="item.name || (item.file && item.file.name)"
-					v-if="item.type === 'file' && item.file && item.file.type && item.file.type.includes('image/')"
-					@click.stop
-				/>
+			<svg
+				v-if="item.status === 'deleting'"
+				class="delete-spinner"
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 512 512"
+			>
+				<path d="M224 160a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32 352a256 256 0 1 0 0-512 256 256 0 1 0 0 512zm0-448c53 0 96 43 96 96s-43 96-96 96-96 43-96 96 43 96 96 96C150 448 64 362 64 256S150 64 256 64zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"/>
+			</svg>
+			<img
+				:src="item.src"
+				:alt="item.name || (item.file && item.file.name)"
+				v-else-if="item.type === 'file' && item.file && item.file.type && item.file.type.includes('image/')"
+				@click.stop
+			/>
 
 				<!-- Для URL-предпросмотров -->
-				<img
-					:src="item.src"
-					:alt="item.name"
-					v-if="item.type === 'url'"
-					@click.stop
-				/>
+			<img
+				:src="item.src"
+				:alt="item.name"
+				v-if="item.type === 'url' && item.status !== 'deleting'"
+				@click.stop
+			/>
 
-				<template v-if="item.type === 'file' && item.file && (!item.file.type || !item.file.type.includes('image/'))">
-					<Icon
-						:name="item.file ? item.file.name.split('.').pop() : 'file'"
-						:mime="item.file ? item.file.type : undefined"
-					/>
-					<div class="file-title" v-if="item.name || item.file.name">{{ item.name || item.file.name }}</div>
-				</template>
+				<template v-if="item.type === 'file' && item.file && item.status !== 'deleting' && (!item.file.type || !item.file.type.includes('image/'))">
+				<Icon
+					:name="item.file ? item.file.name.split('.').pop() : 'file'"
+					:mime="item.file ? item.file.type : undefined"
+				/>
+				<div class="file-title" v-if="item.name || item.file.name">{{ item.name || item.file.name }}</div>
+			</template>
 				<!-- Иконка типа файла для не-изображений -->
 
 				<!-- Кнопка удаления (вынесена из img-details, чтобы быть всегда доступной) -->
@@ -57,10 +65,11 @@
 						:removeFile="removeFileBuiltIn ? removeFileBuiltIn : removeFile"
 					>
 						<PreviewRemoveButton
-							@click="removeFileBuiltIn ? removeFileBuiltIn(item) : removeFile(item)"
-						/>
-					</slot>
-				</div>
+						@click="removeFileBuiltIn ? removeFileBuiltIn(item) : removeFile(item)"
+						:disabled="item.status === 'deleting'"
+					/>
+				</slot>
+			</div>
 
 				<!-- Оверлей с деталями файла -->
 				<div class="img-details" v-if="allowSelectOnPreview && mode !== 'preview' && item.type === 'file' && item.file">
@@ -297,22 +306,45 @@
 		background: rgba(var(--v3-dropzone--error), 0.8);
 	}
 
+	:deep(.img-remove):disabled {
+		cursor: not-allowed;
+		opacity: 0.7;
+	}
+
+	.delete-spinner {
+		width: 56px;
+		height: 56px;
+		fill: rgba(var(--v3-dropzone--primary));
+		animation: v3-dropzone-spin 1s linear infinite;
+	}
+
+	@keyframes v3-dropzone-spin {
+		from {
+			transform: rotate(0deg);
+		}
+		to {
+			transform: rotate(360deg);
+		}
+	}
+
 	:deep(.progress-bar-container) {
 		position: absolute;
 		bottom: 0;
+		left: 0;
 		background-color: #666;
 		border-radius: 5px;
 		overflow: hidden;
 		width: 100%;
 		height: 10px;
+		padding: 0 4px;
 	}
 
 	:deep(.progress-bar) {
 		height: 100%;
 		background-color: rgba(var(--v3-dropzone--primary));
 		text-align: center;
-		font-size: 10px;
-		line-height: 10px;
+		font-size: 11px;
+		line-height: 11px;
 		color: #fff;
 		width: 0;
 		transition: width 0.5s ease-in-out;
