@@ -63,7 +63,7 @@
 				v-if="previewPosition === 'inside' && unifiedItems.length"
 				v-bind="previewProps"
 				@removeFile="removeFile"
-				@click="fileInputAllowed && openSelectFile($event)"
+				@click.stop="fileInputAllowed && openSelectFile($event)"
 				@mouseover="fileInputAllowed ? hover : undefined"
 				@mouseleave="fileInputAllowed ? blurDrop : undefined"
 			>
@@ -218,6 +218,9 @@
 		deleteEndpoint: {
 			type: String,
 		},
+		serverFileIdKey: {
+			type: String,
+		},
 		headers: {
 			type: Object as PropType<Record<string, string>>,
 			default: () => ({}),
@@ -269,11 +272,7 @@
 		if (files.value && Array.isArray(files.value) && files.value.length > 0) {
 			files.value.forEach(fileItem => {
 				if (fileItem && typeof fileItem === 'object') {
-					items.push({
-						...(fileItem as DropzoneFileItem),
-						type: (fileItem as DropzoneFileItem).type,
-						isPreview: Boolean((fileItem as DropzoneFileItem).isPreview),
-					});
+					items.push(fileItem)
 				}
 			});
 		}
@@ -312,6 +311,47 @@
 	const previewsReplaced = ref(false) // Отмечаем, что исходные предпросмотры были заменены
 	const instance = getCurrentInstance()
 
+	const resolvePathValue = (value: unknown, path: string): unknown => {
+		if (!path) return undefined
+
+		const keys = path.split('.').filter(Boolean)
+		let current: unknown = value
+
+		for (const key of keys) {
+			if (!current || typeof current !== 'object') return undefined
+			current = (current as Record<string, unknown>)[key]
+		}
+
+		return current
+	}
+
+	const applyServerFileIdFromResponse = (fileItem: DropzoneFileItem, response?: unknown): void => {
+		if (!props.serverFileIdKey) return
+		if (!response) return
+
+		let normalized: unknown = response
+		if (typeof normalized === 'string') {
+			try {
+				normalized = JSON.parse(normalized)
+			} catch (e) {
+				return
+			}
+		}
+
+		if (!normalized || typeof normalized !== 'object') return
+
+		const candidateFromRoot = resolvePathValue(normalized, props.serverFileIdKey)
+		const candidateFromData = resolvePathValue(
+			(normalized as Record<string, unknown>).data,
+			props.serverFileIdKey,
+		)
+		const candidate =
+			candidateFromRoot !== undefined ? candidateFromRoot : candidateFromData
+		if (typeof candidate === 'string' || typeof candidate === 'number') {
+			fileItem.id = candidate
+		}
+	}
+
 	const hasListener = (listenerPropName: string): boolean => {
 		const vnodeProps = (instance?.vnode?.props ?? {}) as Record<string, unknown>
 		const candidate = vnodeProps[listenerPropName]
@@ -327,9 +367,19 @@
 	})
 
 	const processIncomingFiles = (incomingFiles: FileList | File[]): void => {
+		const previousFiles = Array.isArray(files.value) ? [...files.value] : []
+		const shouldAutoDeleteBeforeUpload =
+			props.selectFileStrategy === 'replace' &&
+			props.serverSide &&
+			props.mode !== 'preview' &&
+			Boolean(props.deleteEndpoint)
+		const autoDeleteCandidates = shouldAutoDeleteBeforeUpload
+			? previousFiles.filter((f) => f && f.status === 'success' && !f.isPreview)
+			: []
+
 		const result = processIncomingFilesUseCase({
 			incomingFiles,
-			currentFiles: files.value,
+			currentFiles: previousFiles,
 			maxFiles: props.maxFiles,
 			maxFileSize: props.maxFileSize,
 			accept: props.accept,
@@ -351,17 +401,26 @@
 			emit('update:previews', [])
 		}
 
-		result.uploadCandidates.forEach((fileItem) => {
-			// Загружаем файлы на сервер (только не для preview режима)
-			if (props.serverSide && props.mode !== 'preview') {
-				uploadFileToServer(fileItem)
-			} else if (props.mode !== 'preview') {
-				fileItem.progress = 100
-				fileItem.status = 'success'
-				fileItem.message = 'Файл успешно загружен'
-				emit('fileUploaded', { file: fileItem })
-			}
-		})
+		const startUploads = () => {
+			result.uploadCandidates.forEach((fileItem) => {
+				// Загружаем файлы на сервер (только не для preview режима)
+				if (props.serverSide && props.mode !== 'preview') {
+					uploadFileToServer(fileItem)
+				} else if (props.mode !== 'preview') {
+					fileItem.progress = 100
+					fileItem.status = 'success'
+					fileItem.message = 'Файл успешно загружен'
+					emit('fileUploaded', { file: fileItem })
+				}
+			})
+		}
+
+		if (autoDeleteCandidates.length) {
+			Promise.all(autoDeleteCandidates.map((item) => removeFileFromServer(item))).finally(startUploads)
+			return
+		}
+
+		startUploads()
 	}
 
 	// Обработка файлов, выбранных через input
@@ -375,36 +434,38 @@
 	// Загрузка файла на сервер
 	const uploadFileToServer = (fileItem: DropzoneFileItem): void => {
 		const endpoint = props.uploadEndpoint || ''
+		const reactiveFileItem = files.value.find((f) => f.id === fileItem.id) ?? fileItem
 
 		if (hasListener('onUploadRequest')) {
 			const formData = new FormData();
-			formData.append('file', fileItem.file)
+			formData.append('file', reactiveFileItem.file)
 
-			fileItem.status = 'uploading'
-			fileItem.message = 'Идёт загрузка'
+			reactiveFileItem.status = 'uploading'
+			reactiveFileItem.message = 'Идёт загрузка'
 
 			let settled = false
 			const progress = (percent: number) => {
-				fileItem.progress = Math.max(0, Math.min(100, Math.round(percent)))
+				reactiveFileItem.progress = Math.max(0, Math.min(100, Math.round(percent)))
 			}
-			const success = () => {
+			const success = (response?: unknown) => {
 				if (settled) return
 				settled = true
-				fileItem.progress = 100
-				fileItem.status = 'success'
-				fileItem.message = 'Файл успешно загружен'
-				emit('fileUploaded', { file: fileItem })
+				applyServerFileIdFromResponse(reactiveFileItem, response)
+				reactiveFileItem.progress = 100
+				reactiveFileItem.status = 'success'
+				reactiveFileItem.message = 'Файл успешно загружен'
+				emit('fileUploaded', { file: reactiveFileItem })
 			}
 			const error = (message?: string) => {
 				if (settled) return
 				settled = true
-				fileItem.status = 'error'
-				fileItem.message = message ?? 'Загрузка не удалась'
-				handleFileError('upload-error', [fileItem.file])
+				reactiveFileItem.status = 'error'
+				reactiveFileItem.message = message ?? 'Загрузка не удалась'
+				handleFileError('upload-error', [reactiveFileItem.file])
 			}
 
 			emit('upload-request', {
-				fileItem,
+				fileItem: reactiveFileItem,
 				endpoint,
 				headers: props.headers,
 				formData,
@@ -424,39 +485,46 @@
 		})
 
 		const formData = new FormData();
-		formData.append('file', fileItem.file)
+		formData.append('file', reactiveFileItem.file)
 
 		// Старт загрузки
 		xhr.upload.onloadstart = () => {
-			fileItem.status = 'uploading'
-			fileItem.message = 'Идёт загрузка'
+			reactiveFileItem.status = 'uploading'
+			reactiveFileItem.message = 'Идёт загрузка'
 		};
 
 		// Прогресс загрузки
 		xhr.upload.onprogress = (event) => {
 			if (event.lengthComputable) {
-				fileItem.progress = Math.round((event.loaded / event.total) * 100)
+				reactiveFileItem.progress = Math.round((event.loaded / event.total) * 100)
 			}
 		};
 
 		// Успешная загрузка
 		xhr.onload = () => {
 			if (xhr.status === 200) {
-				fileItem.status = 'success'
-				fileItem.message = 'Файл успешно загружен'
-				emit('fileUploaded', { file: fileItem })
+				let response: unknown = undefined
+				try {
+					response = xhr.responseText ? JSON.parse(xhr.responseText) : undefined
+				} catch (e) {
+					response = xhr.responseText
+				}
+				applyServerFileIdFromResponse(reactiveFileItem, response)
+				reactiveFileItem.status = 'success'
+				reactiveFileItem.message = 'Файл успешно загружен'
+				emit('fileUploaded', { file: reactiveFileItem })
 			} else {
-				fileItem.status = 'error'
-				fileItem.message = xhr.statusText
-				handleFileError('upload-error', [fileItem.file])
+				reactiveFileItem.status = 'error'
+				reactiveFileItem.message = xhr.statusText
+				handleFileError('upload-error', [reactiveFileItem.file])
 			}
 		};
 
 		// Ошибка загрузки
 		xhr.onerror = () => {
-			fileItem.status = 'error'
-			fileItem.message = 'Загрузка не удалась'
-			handleFileError('upload-error', [fileItem.file])
+			reactiveFileItem.status = 'error'
+			reactiveFileItem.message = 'Загрузка не удалась'
+			handleFileError('upload-error', [reactiveFileItem.file])
 		};
 
 		// Отправляем файл на сервер
@@ -510,33 +578,42 @@
 		emit('update:modelValue', files.value)
 	};
 
-	const removeFileFromServer = (item: DropzoneItem): void => {
-		const endpoint = props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : ''
-
-		if (hasListener('onRemoveRequest')) {
-			let settled = false
-			const success = () => {
-				if (settled) return
-				settled = true
-				removeFileFromList(item)
-			}
-			const error = (message?: string) => {
-				if (settled) return
-				settled = true
-				item.status = 'error'
-				item.message = message ?? 'Удаление не удалось'
-				handleFileError('delete-error', [item])
-			}
-
-			emit('remove-request', {
-				item,
-				endpoint,
-				headers: props.headers,
-				success,
-				error,
-			})
-			return
+	const removeFileFromServer = (item: DropzoneItem): Promise<void> => {
+		if (item.status === 'deleting') {
+			return Promise.resolve()
 		}
+
+		const endpoint = props.deleteEndpoint ? `${props.deleteEndpoint}/${item.id}` : ''
+		item.status = 'deleting'
+		item.message = 'Удаление...'
+
+		return new Promise((resolve) => {
+			if (hasListener('onRemoveRequest')) {
+				let settled = false
+				const success = () => {
+					if (settled) return
+					settled = true
+					removeFileFromList(item)
+					resolve()
+				}
+				const error = (message?: string) => {
+					if (settled) return
+					settled = true
+					item.status = 'error'
+					item.message = message ?? 'Удаление не удалось'
+					handleFileError('delete-error', [item])
+					resolve()
+				}
+
+				emit('remove-request', {
+					item,
+					endpoint,
+					headers: props.headers,
+					success,
+					error,
+				})
+				return
+			}
 
 		const xhr = new XMLHttpRequest();
 		xhr.open('DELETE', endpoint, true)
@@ -546,19 +623,25 @@
 			xhr.setRequestHeader(key, props.headers[key]);
 		});
 
-		xhr.onload = () => {
-			if (xhr.status === 200) {
-				removeFileFromList(item)
-			} else {
+			xhr.onload = () => {
+				if (xhr.status === 200) {
+					removeFileFromList(item)
+					resolve()
+				} else {
+					item.status = 'error'
+					handleFileError('delete-error', [item])
+					resolve()
+				}
+			};
+
+			xhr.onerror = () => {
+				item.status = 'error'
 				handleFileError('delete-error', [item])
-			}
-		};
+				resolve()
+			};
 
-		xhr.onerror = () => {
-			handleFileError('delete-error', [item])
-		};
-
-		xhr.send()
+			xhr.send()
+		})
 	};
 
 	const removeFileFromList = (item: DropzoneItem): void => {
