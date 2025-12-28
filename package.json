@@ -2,7 +2,7 @@
   "name": "@astro-masters/vue3-dropzone-ts",
   "description": "Vue simple dropzone",
   "private": false,
-  "version": "1.1.0",
+  "version": "2.0.0",
   "author": "Stanislav Dremin <st.dremin@ya.ru>",
   "license": "MIT",
   "type": "module",
